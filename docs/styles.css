@@ -995,7 +995,7 @@ body.lang-zh .hero-title {
   }
 
   .hero-title {
-    font-size: 48px;
+    font-size: 42px;
   }
 
   .features-grid {
@@ -1008,6 +1008,10 @@ body.lang-zh .hero-title {
 
   .tools-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .game-scene {
+    height: 260px;
   }
 }
 
@@ -1016,61 +1020,198 @@ body.lang-zh .hero-title {
     padding: 12px 16px;
   }
 
+  .nav-brand {
+    gap: 8px;
+  }
+
+  .nav-title {
+    font-size: 16px;
+  }
+
+  .nav-logo {
+    width: 28px;
+    height: 28px;
+  }
+
   .nav-links {
-    gap: 16px;
+    gap: 8px;
   }
 
   .nav-link:not(.nav-link-github) {
     display: none;
   }
 
+  .lang-switcher {
+    padding: 2px;
+  }
+
+  .lang-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .github-text {
+    display: none;
+  }
+
+  .nav-link-github {
+    padding: 6px 10px;
+  }
+
   .hero {
-    padding: 100px 0 60px;
+    padding: 80px 0 40px;
+    min-height: auto;
   }
 
   .hero-title {
-    font-size: 36px;
+    font-size: 32px;
   }
 
   .hero-description {
-    font-size: 16px;
+    font-size: 15px;
+  }
+
+  .hero-badge {
+    font-size: 12px;
+    padding: 6px 12px;
   }
 
   .hero-actions {
     flex-direction: column;
     align-items: center;
+    gap: 12px;
+  }
+
+  .btn {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+
+  .preview-frame {
+    padding: 16px;
+  }
+
+  .preview-pixel {
+    width: 20px;
+    height: 20px;
+  }
+
+  .section-header {
+    margin-bottom: 40px;
   }
 
   .section-title {
-    font-size: 32px;
+    font-size: 28px;
+  }
+
+  .section-subtitle {
+    font-size: 15px;
+  }
+
+  .features {
+    padding: 60px 0;
   }
 
   .features-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .feature-card {
+    padding: 24px;
+  }
+
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .feature-title {
+    font-size: 18px;
+  }
+
+  .examples {
+    padding: 60px 0;
   }
 
   .game-scene {
-    height: 220px;
+    height: 180px;
+    border-radius: 12px;
+    margin: 0 16px;
   }
 
-  .scene-bird { width: 32px; height: 32px; }
-  .scene-chest { width: 40px; height: 40px; bottom: 32px; }
-  .scene-sword { width: 28px; height: 28px; bottom: 32px; }
-  .scene-heart { width: 24px; height: 24px; bottom: 36px; }
-  .scene-explosion { width: 48px; height: 48px; bottom: 28px; }
-  .scene-tree-1 { width: 48px; }
-  .scene-tree-2 { width: 40px; }
+  .scene-bird { width: 28px; height: 28px; }
+  .scene-chest { width: 36px; height: 36px; bottom: 28px; }
+  .scene-sword { width: 24px; height: 24px; bottom: 28px; }
+  .scene-heart { width: 20px; height: 20px; bottom: 32px; }
+  .scene-explosion { width: 40px; height: 40px; bottom: 24px; }
+  .scene-tree-1 { width: 40px; }
+  .scene-tree-2 { width: 32px; }
 
   .asset-cards {
     grid-template-columns: 1fr;
+    padding: 0 16px;
   }
 
   .game-assets {
     gap: 16px;
   }
 
+  .getting-started {
+    padding: 60px 0;
+  }
+
+  .steps {
+    padding: 0 16px;
+  }
+
+  .step {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step-number {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  .step-code {
+    overflow-x: auto;
+    padding: 10px 12px;
+  }
+
+  .step-code code {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .step-code pre {
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .command-example {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  .tools {
+    padding: 60px 0;
+  }
+
   .tools-grid {
     grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .tool-list li {
+    font-size: 12px;
+  }
+
+  .footer {
+    padding: 40px 0;
   }
 
   .footer-links {
@@ -1080,12 +1221,40 @@ body.lang-zh .hero-title {
 }
 
 @media (max-width: 480px) {
+  .hero-title {
+    font-size: 28px;
+  }
+
   .preview-pixel {
     width: 16px;
     height: 16px;
   }
 
+  .preview-frame {
+    padding: 12px;
+  }
+
+  .feature-card {
+    padding: 20px;
+  }
+
+  .game-scene {
+    height: 150px;
+  }
+
+  .scene-bird { width: 24px; height: 24px; }
+  .scene-chest { width: 30px; height: 30px; bottom: 24px; }
+  .scene-sword { width: 20px; height: 20px; bottom: 24px; }
+  .scene-heart { width: 16px; height: 16px; bottom: 28px; }
+  .scene-explosion { width: 32px; height: 32px; bottom: 20px; }
+  .scene-tree-1 { width: 32px; }
+  .scene-tree-2 { width: 28px; }
+
+  .section-title {
+    font-size: 24px;
+  }
+
   .example-game {
-    padding: 24px;
+    padding: 16px;
   }
 }
