@@ -30,6 +30,8 @@ Gallery of pixel art created with Piskel MCP Server:
 ## Installation
 
 ```bash
+git clone https://github.com/yafeiaa/piskel-mcp-server.git
+cd piskel-mcp-server
 npm install
 npm run build
 ```
