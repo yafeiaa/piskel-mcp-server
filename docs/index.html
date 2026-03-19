@@ -421,34 +421,26 @@
           <div class="step">
             <div class="step-number">2</div>
             <div class="step-content">
-              <h3 class="step-title" data-i18n="step2_title">Start Server</h3>
+              <h3 class="step-title" data-i18n="step2_title">Connect to Agent</h3>
+              <p class="step-description" data-i18n="step2_desc">Add the following config to your Agent settings:</p>
               <div class="step-code">
-                <code>npm start</code>
+                <pre><code>{
+  "mcpServers": {
+    "piskel": {
+      "command": "node",
+      "args": ["/path/to/piskel-mcp-server/dist/index.js"]
+    }
+  }
+}</code></pre>
               </div>
-              <p class="step-description"><span data-i18n="step2_desc">Server runs on</span> <code>http://localhost:3333</code></p>
+              <p class="step-description" data-i18n="step2_note">Replace <code>/path/to/piskel-mcp-server/</code> with your actual clone path.</p>
             </div>
           </div>
           <div class="step">
             <div class="step-number">3</div>
             <div class="step-content">
-              <h3 class="step-title" data-i18n="step3_title">Configure AI</h3>
-              <div class="step-code">
-                <pre><code>{
-  "mcpServers": {
-    "piskel": {
-      "url": "http://localhost:3333/mcp",
-      "description": "Pixel art editor"
-    }
-  }
-}</code></pre>
-              </div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-number">4</div>
-            <div class="step-content">
-              <h3 class="step-title" data-i18n="step4_title">Create Art</h3>
-              <p class="step-description" data-i18n="step4_desc">Start creating pixel art with natural language:</p>
+              <h3 class="step-title" data-i18n="step3_title">Start Creating!</h3>
+              <p class="step-description" data-i18n="step3_desc">Once connected, create pixel art with natural language:</p>
               <div class="step-commands">
                 <div class="command-example" data-i18n="command1">"Create a 32x32 sprite of a red heart"</div>
                 <div class="command-example" data-i18n="command2">"Draw a blue circle in the center"</div>
@@ -456,6 +448,7 @@
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </section>
