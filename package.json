@@ -1,0 +1,48 @@
+{
+  "name": "@yafeiaa/piskel-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Piskel pixel art editor - derived from Piskel (Apache-2.0)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:run": "node --loader ts-node/esm test/basic.test.ts",
+    "lint": "eslint src/**/*.ts"
+  },
+  "keywords": [
+    "mcp",
+    "pixel-art",
+    "piskel",
+    "sprite",
+    "animation"
+  ],
+  "author": "yafeiaa (https://github.com/yafeiaa)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yafeiaa/piskel-mcp-server"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.33.1",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "gifenc": "^1.0.3",
+    "pngjs": "^7.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "globals": "^13.24.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

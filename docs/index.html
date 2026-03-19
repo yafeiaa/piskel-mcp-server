@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piskel MCP Server - Pixel Art Editor for AI</title>
+  <meta name="description" content="MCP Server for Piskel pixel art editor. Enables AI assistants to create and manipulate pixel art through the Model Context Protocol.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='10' y='10' width='20' height='20' fill='%23ff6b6b'/><rect x='40' y='10' width='20' height='20' fill='%2351cf66'/><rect x='70' y='10' width='20' height='20' fill='%23339af0'/><rect x='10' y='40' width='20' height='20' fill='%23fcc419'/><rect x='40' y='40' width='20' height='20' fill='%23cc5de8'/><rect x='70' y='40' width='20' height='20' fill='%23ff6b6b'/><rect x='10' y='70' width='20' height='20' fill='%23339af0'/><rect x='40' y='70' width='20' height='20' fill='%23fcc419'/><rect x='70' y='70' width='20' height='20' fill='%2351cf66'/></svg>">
+</head>
+<body>
+  <header class="header">
+    <nav class="nav">
+      <div class="nav-brand">
+        <svg class="nav-logo" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="2" width="8" height="8" fill="#ff6b6b"/>
+          <rect x="12" y="2" width="8" height="8" fill="#51cf66"/>
+          <rect x="22" y="2" width="8" height="8" fill="#339af0"/>
+          <rect x="2" y="12" width="8" height="8" fill="#fcc419"/>
+          <rect x="12" y="12" width="8" height="8" fill="#cc5de8"/>
+          <rect x="22" y="12" width="8" height="8" fill="#ff6b6b"/>
+          <rect x="2" y="22" width="8" height="8" fill="#339af0"/>
+          <rect x="12" y="22" width="8" height="8" fill="#fcc419"/>
+          <rect x="22" y="22" width="8" height="8" fill="#51cf66"/>
+        </svg>
+        <span class="nav-title">Piskel MCP</span>
+      </div>
+      <div class="nav-links">
+        <a href="#features" class="nav-link" data-i18n="nav_features">Features</a>
+        <a href="#examples" class="nav-link" data-i18n="nav_examples">Examples</a>
+        <a href="#getting-started" class="nav-link" data-i18n="nav_get_started">Get Started</a>
+        <div class="lang-switcher">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="zh">中</button>
+        </div>
+        <a href="https://github.com/yafeiaa/piskel-mcp-server" class="nav-link nav-link-github" target="_blank">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          <span class="github-text">GitHub</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-bg">
+        <div class="pixel-grid"></div>
+        <div class="floating-pixels">
+          <div class="pixel pixel-1"></div>
+          <div class="pixel pixel-2"></div>
+          <div class="pixel pixel-3"></div>
+          <div class="pixel pixel-4"></div>
+          <div class="pixel pixel-5"></div>
+        </div>
+      </div>
+      <div class="hero-content">
+        <div class="hero-left">
+          <div class="hero-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0l-5.5 9h11z"/>
+              <circle cx="12" cy="17" r="6"/>
+            </svg>
+            <span data-i18n="hero_badge">Powered by MCP Protocol</span>
+          </div>
+          <h1 class="hero-title">
+            <span class="hero-title-line" data-i18n="hero_title_line1">Pixel Art</span>
+            <span class="hero-title-line accent" data-i18n="hero_title_line2">for AI</span>
+          </h1>
+          <p class="hero-description" data-i18n="hero_description">Create stunning pixel art with natural language. Piskel MCP Server enables AI assistants to design, animate, and export pixel art through the Model Context Protocol.</p>
+          <div class="hero-actions">
+            <a href="#getting-started" class="btn btn-primary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span data-i18n="btn_get_started">Get Started</span>
+            </a>
+            <a href="#examples" class="btn btn-secondary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span data-i18n="btn_view_examples">View Examples</span>
+            </a>
+          </div>
+        </div>
+        <div class="hero-preview">
+          <div class="preview-frame">
+            <div class="preview-pixel-grid">
+              <div class="preview-row">
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ffffff;"></div>
+                <div class="preview-pixel" style="background: #ffffff;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ffffff;"></div>
+                <div class="preview-pixel" style="background: #ffffff;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff8787;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+                <div class="preview-pixel" style="background: #ff6b6b;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="preview-info">
+            <span class="preview-label" data-i18n="preview_label">Live Preview</span>
+            <span class="preview-text" data-i18n="preview_text">32×32 Heart Sprite</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="features_title">Powerful Features</h2>
+          <p class="section-subtitle" data-i18n="features_subtitle">Everything you need to create professional pixel art</p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <rect x="7" y="7" width="3" height="3"/>
+                <rect x="14" y="7" width="3" height="3"/>
+                <rect x="7" y="14" width="3" height="3"/>
+                <rect x="14" y="14" width="3" height="3"/>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="feature_drawing_title">Drawing Tools</h3>
+            <p class="feature-description" data-i18n="feature_drawing_desc">Pixels, lines, rectangles, circles, and flood fill. Complete set of drawing tools for any pixel art project.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                <polyline points="2 17 12 22 22 17"/>
+                <polyline points="2 12 12 17 22 12"/>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="feature_layers_title">Layer Management</h3>
+            <p class="feature-description" data-i18n="feature_layers_desc">Organize your artwork with multiple layers. Add, remove, and reorder layers for complex compositions.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+                <line x1="7" y1="2" x2="7" y2="22"/>
+                <line x1="17" y1="2" x2="17" y2="22"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <line x1="2" y1="7" x2="22" y2="7"/>
+                <line x1="2" y1="17" x2="22" y2="17"/>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="feature_animation_title">Animation</h3>
+            <p class="feature-description" data-i18n="feature_animation_desc">Create frame-by-frame animations. Duplicate, add, and remove frames for smooth sprite animations.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="feature_export_title">Export Options</h3>
+            <p class="feature-description" data-i18n="feature_export_desc">Export to PNG, GIF, and sprite sheets. Perfect for game development and web projects.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="feature_ai_title">AI Integration</h3>
+            <p class="feature-description" data-i18n="feature_ai_desc">Powered by Model Context Protocol. Connect with AI assistants to create art using natural language.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"/>
+                <polyline points="8 6 2 12 8 18"/>
+              </svg>
+            </div>
+            <h3 class="feature-title" data-i18n="feature_dev_title">Developer Friendly</h3>
+            <p class="feature-description" data-i18n="feature_dev_desc">Simple REST API via MCP. Easy to integrate into your workflow or extend for custom needs.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="examples" class="examples">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="examples_title">Example Creations</h2>
+          <p class="section-subtitle" data-i18n="examples_subtitle">All pixel art below was generated by AI using Piskel MCP Server</p>
+        </div>
+
+        <!-- Game Scene Showcase -->
+        <div class="scene-showcase">
+          <div class="scene-label">
+            <span class="scene-badge">✦ AI Generated Scene</span>
+          </div>
+          <div class="game-scene">
+            <!-- Sky background -->
+            <div class="scene-sky">
+              <div class="scene-clouds">
+                <div class="cloud cloud-1"></div>
+                <div class="cloud cloud-2"></div>
+                <div class="cloud cloud-3"></div>
+              </div>
+              <!-- Flying bird -->
+              <img src="assets/bird_fly.gif" alt="Flying Bird" class="scene-bird" title="bird_fly.gif">
+            </div>
+            <!-- Ground layer -->
+            <div class="scene-ground">
+              <!-- Trees -->
+              <img src="assets/pixel_tree.png" alt="Pixel Tree" class="scene-tree scene-tree-1" title="pixel_tree.png">
+              <img src="assets/pixel_tree.png" alt="Pixel Tree" class="scene-tree scene-tree-2" title="pixel_tree.png">
+              <!-- Treasure chest -->
+              <img src="assets/treasure_chest.gif" alt="Treasure Chest" class="scene-chest" title="treasure_chest.gif">
+              <!-- Sword item -->
+              <img src="assets/sword_item.gif" alt="Sword" class="scene-sword" title="sword_item.gif">
+              <!-- Heart icon -->
+              <img src="assets/heart_icon.gif" alt="Heart" class="scene-heart" title="heart_icon.gif">
+              <!-- Explosion effect -->
+              <img src="assets/explosion_effect.gif" alt="Explosion" class="scene-explosion" title="explosion_effect.gif">
+              <!-- Ground tiles -->
+              <div class="scene-tiles"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Individual Asset Cards -->
+        <div class="assets-detail">
+          <h3 class="assets-detail-title" data-i18n="assets_detail_title">Sprite Details</h3>
+          <div class="asset-cards">
+
+            <div class="asset-card">
+              <div class="asset-card-preview animated-bg">
+                <img src="assets/bird_fly.gif" alt="Bird Fly Animation" class="asset-card-img">
+              </div>
+              <div class="asset-card-info">
+                <div class="asset-card-name">bird_fly.gif</div>
+                <div class="asset-card-tags">
+                  <span class="tag tag-anim">Animated</span>
+                  <span class="tag tag-char">Character</span>
+                </div>
+                <div class="asset-card-desc" data-i18n="asset_bird_desc">4-frame flapping animation, 16×16 pixel bird sprite</div>
+              </div>
+            </div>
+
+            <div class="asset-card">
+              <div class="asset-card-preview animated-bg">
+                <img src="assets/treasure_chest.gif" alt="Treasure Chest" class="asset-card-img">
+              </div>
+              <div class="asset-card-info">
+                <div class="asset-card-name">treasure_chest.gif</div>
+                <div class="asset-card-tags">
+                  <span class="tag tag-anim">Animated</span>
+                  <span class="tag tag-item">Item</span>
+                </div>
+                <div class="asset-card-desc" data-i18n="asset_chest_desc">Opening animation treasure chest with golden glow effect</div>
+              </div>
+            </div>
+
+            <div class="asset-card">
+              <div class="asset-card-preview animated-bg">
+                <img src="assets/explosion_effect.gif" alt="Explosion Effect" class="asset-card-img">
+              </div>
+              <div class="asset-card-info">
+                <div class="asset-card-name">explosion_effect.gif</div>
+                <div class="asset-card-tags">
+                  <span class="tag tag-anim">Animated</span>
+                  <span class="tag tag-fx">Effect</span>
+                </div>
+                <div class="asset-card-desc" data-i18n="asset_explosion_desc">Multi-frame explosion VFX with orange and red particles</div>
+              </div>
+            </div>
+
+            <div class="asset-card">
+              <div class="asset-card-preview animated-bg">
+                <img src="assets/heart_icon.gif" alt="Heart Icon" class="asset-card-img">
+              </div>
+              <div class="asset-card-info">
+                <div class="asset-card-name">heart_icon.gif</div>
+                <div class="asset-card-tags">
+                  <span class="tag tag-anim">Animated</span>
+                  <span class="tag tag-ui">UI</span>
+                </div>
+                <div class="asset-card-desc" data-i18n="asset_heart_desc">Pulsing heart icon, perfect for health/life UI elements</div>
+              </div>
+            </div>
+
+            <div class="asset-card">
+              <div class="asset-card-preview dark-bg">
+                <img src="assets/sword_item.gif" alt="Sword Item" class="asset-card-img">
+              </div>
+              <div class="asset-card-info">
+                <div class="asset-card-name">sword_item.gif</div>
+                <div class="asset-card-tags">
+                  <span class="tag tag-anim">Animated</span>
+                  <span class="tag tag-item">Item</span>
+                </div>
+                <div class="asset-card-desc" data-i18n="asset_sword_desc">Gleaming sword with shimmer animation, game weapon sprite</div>
+              </div>
+            </div>
+
+            <div class="asset-card">
+              <div class="asset-card-preview dark-bg">
+                <img src="assets/pixel_tree.png" alt="Pixel Tree" class="asset-card-img">
+              </div>
+              <div class="asset-card-info">
+                <div class="asset-card-name">pixel_tree.png</div>
+                <div class="asset-card-tags">
+                  <span class="tag tag-static">Static</span>
+                  <span class="tag tag-env">Environment</span>
+                </div>
+                <div class="asset-card-desc" data-i18n="asset_tree_desc">Lush green pixel art tree for platformer backgrounds</div>
+              </div>
+            </div>
+
+            <div class="asset-card wide-card">
+              <div class="asset-card-preview dark-bg sheet-preview">
+                <img src="assets/explosion_effect_sheet.png" alt="Explosion Sprite Sheet" class="asset-card-sheet">
+              </div>
+              <div class="asset-card-info">
+                <div class="asset-card-name">explosion_effect_sheet.png</div>
+                <div class="asset-card-tags">
+                  <span class="tag tag-static">Sprite Sheet</span>
+                  <span class="tag tag-fx">Effect</span>
+                </div>
+                <div class="asset-card-desc" data-i18n="asset_sheet_desc">All animation frames exported as a single sprite sheet for game engines</div>
+              </div>
+            </div>
+
+            <div class="asset-card wide-card">
+              <div class="asset-card-preview dark-bg sheet-preview">
+                <img src="assets/treasure_chest_sheet.png" alt="Treasure Chest Sprite Sheet" class="asset-card-sheet">
+              </div>
+              <div class="asset-card-info">
+                <div class="asset-card-name">treasure_chest_sheet.png</div>
+                <div class="asset-card-tags">
+                  <span class="tag tag-static">Sprite Sheet</span>
+                  <span class="tag tag-item">Item</span>
+                </div>
+                <div class="asset-card-desc" data-i18n="asset_chest_sheet_desc">Treasure chest frames as sprite sheet, ready for Unity / Phaser / Godot</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="getting-started" class="getting-started">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="getting_started_title">Quick Start</h2>
+          <p class="section-subtitle" data-i18n="getting_started_subtitle">Get up and running in minutes</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3 class="step-title" data-i18n="step1_title">Install</h3>
+              <div class="step-code">
+                <code>npm install</code>
+                <button class="copy-btn" data-copy="npm install">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="step-code">
+                <code>npm run build</code>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3 class="step-title" data-i18n="step2_title">Start Server</h3>
+              <div class="step-code">
+                <code>npm start</code>
+              </div>
+              <p class="step-description"><span data-i18n="step2_desc">Server runs on</span> <code>http://localhost:3333</code></p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3 class="step-title" data-i18n="step3_title">Configure AI</h3>
+              <div class="step-code">
+                <pre><code>{
+  "mcpServers": {
+    "piskel": {
+      "url": "http://localhost:3333/mcp",
+      "description": "Pixel art editor"
+    }
+  }
+}</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <h3 class="step-title" data-i18n="step4_title">Create Art</h3>
+              <p class="step-description" data-i18n="step4_desc">Start creating pixel art with natural language:</p>
+              <div class="step-commands">
+                <div class="command-example" data-i18n="command1">"Create a 32x32 sprite of a red heart"</div>
+                <div class="command-example" data-i18n="command2">"Draw a blue circle in the center"</div>
+                <div class="command-example" data-i18n="command3">"Export as animated GIF"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tools">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="tools_title">Available Tools</h2>
+          <p class="section-subtitle" data-i18n="tools_subtitle">Complete MCP toolset for pixel art manipulation</p>
+        </div>
+        <div class="tools-grid">
+          <div class="tool-category">
+            <h3 class="tool-category-title" data-i18n="tool_category_project">Project</h3>
+            <ul class="tool-list">
+              <li><code>piskel_create_project</code></li>
+              <li><code>piskel_list_projects</code></li>
+              <li><code>piskel_get_project_info</code></li>
+              <li><code>piskel_delete_project</code></li>
+            </ul>
+          </div>
+          <div class="tool-category">
+            <h3 class="tool-category-title" data-i18n="tool_category_drawing">Drawing</h3>
+            <ul class="tool-list">
+              <li><code>piskel_draw_pixel</code></li>
+              <li><code>piskel_draw_pixels</code></li>
+              <li><code>piskel_draw_line</code></li>
+              <li><code>piskel_draw_rectangle</code></li>
+              <li><code>piskel_draw_circle</code></li>
+              <li><code>piskel_fill_area</code></li>
+              <li><code>piskel_erase_pixel</code></li>
+            </ul>
+          </div>
+          <div class="tool-category">
+            <h3 class="tool-category-title" data-i18n="tool_category_frames">Frames & Layers</h3>
+            <ul class="tool-list">
+              <li><code>piskel_add_frame</code></li>
+              <li><code>piskel_remove_frame</code></li>
+              <li><code>piskel_duplicate_frame</code></li>
+              <li><code>piskel_add_layer</code></li>
+              <li><code>piskel_remove_layer</code></li>
+            </ul>
+          </div>
+          <div class="tool-category">
+            <h3 class="tool-category-title" data-i18n="tool_category_export">Export</h3>
+            <ul class="tool-list">
+              <li><code>piskel_export_png</code></li>
+              <li><code>piskel_export_gif</code></li>
+              <li><code>piskel_export_sprite_sheet</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <svg class="footer-logo" viewBox="0 0 32 32" fill="none">
+            <rect x="2" y="2" width="8" height="8" fill="#ff6b6b"/>
+            <rect x="12" y="2" width="8" height="8" fill="#51cf66"/>
+            <rect x="22" y="2" width="8" height="8" fill="#339af0"/>
+            <rect x="2" y="12" width="8" height="8" fill="#fcc419"/>
+            <rect x="12" y="12" width="8" height="8" fill="#cc5de8"/>
+            <rect x="22" y="12" width="8" height="8" fill="#ff6b6b"/>
+            <rect x="2" y="22" width="8" height="8" fill="#339af0"/>
+            <rect x="12" y="22" width="8" height="8" fill="#fcc419"/>
+            <rect x="22" y="22" width="8" height="8" fill="#51cf66"/>
+          </svg>
+          <span class="footer-title">Piskel MCP Server</span>
+        </div>
+        <div class="footer-links">
+          <a href="https://github.com/yafeiaa/piskel-mcp-server" target="_blank" data-i18n="footer_github">GitHub</a>
+          <a href="./docs/README_en.md" target="_blank" data-i18n="footer_docs">Documentation</a>
+          <a href="./docs/CONTRIBUTING_en.md" target="_blank" data-i18n="footer_contributing">Contributing</a>
+        </div>
+        <p class="footer-copyright"><span data-i18n="footer_based">Based on</span> <a href="https://github.com/piskelapp/piskel" target="_blank">Piskel</a> <span data-i18n="footer_by">by Julian Descottes</span>. Apache-2.0 License.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="i18n.js"></script>
+  <script>
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.dataset.copy;
+        navigator.clipboard.writeText(text);
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 2000);
+      });
+    });
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

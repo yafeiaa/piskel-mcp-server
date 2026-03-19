@@ -1,0 +1,22 @@
+Piskel MCP Server
+Copyright 2026 yafeiaa
+
+This product includes software derived from Piskel (https://github.com/piskelapp/piskel)
+Copyright 2017 Julian Descottes
+
+Licensed under the Apache License, Version 2.0
+
+================================================================================
+
+THIRD-PARTY NOTICES:
+
+This project is a derivative work of Piskel, originally created by Julian Descottes
+and distributed under the Apache License, Version 2.0.
+
+The following components have been adapted from the original Piskel source code:
+- Core data models (Frame, Layer, Piskel)
+- Drawing algorithms (Bresenham line, circle, flood fill)
+- Color conversion utilities
+- Frame rendering logic
+
+Original Piskel source: https://github.com/piskelapp/piskel
