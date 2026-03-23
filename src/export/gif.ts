@@ -10,7 +10,7 @@
  */
 
 import { Piskel } from '../core/Piskel.js';
-import { mergeLayersAtFrame, frameToRGBA } from './png.js';
+import { mergeLayersAtFrame, frameToRGBA, scaleRGBAData } from './png.js';
 
 /**
  * GIF encoder for creating animated GIFs.
@@ -144,7 +144,7 @@ class GIFEncoder {
     }
   }
 
-  private writeNetscapeExtension(output: number[]): void {
+  private writeNetscapeExtension(output: number[], loopCount: number = 0): void {
     // Application Extension
     output.push(0x21); // Extension introducer
     output.push(0xff); // Application Extension Label
@@ -161,8 +161,8 @@ class GIFEncoder {
     // Sub-block
     output.push(3); // Sub-block size
     output.push(1); // Loop sub-block ID
-    output.push(0); // Loop count (0 = infinite)
-    output.push(0);
+    output.push(loopCount & 0xff); // Loop count low byte (0 = infinite)
+    output.push((loopCount >> 8) & 0xff); // Loop count high byte
 
     // Block terminator
     output.push(0);
@@ -359,17 +359,27 @@ class GIFEncoder {
  */
 export function exportAsGIF(
   piskel: Piskel,
-  frameDelay: number = 100
+  frameDelay: number = 100,
+  scale: number = 1
 ): Uint8Array {
   const width = piskel.getWidth();
   const height = piskel.getHeight();
   const frameCount = piskel.getFrameCount();
 
-  const encoder = new GIFEncoder(width, height);
+  const outputWidth = scale > 1 ? width * scale : width;
+  const outputHeight = scale > 1 ? height * scale : height;
+
+  const encoder = new GIFEncoder(outputWidth, outputHeight);
 
   for (let i = 0; i < frameCount; i++) {
     const merged = mergeLayersAtFrame(piskel, i);
-    const rgba = frameToRGBA(merged);
+    let rgba = frameToRGBA(merged);
+
+    if (scale > 1) {
+      const scaled = scaleRGBAData(rgba, width, height, scale);
+      rgba = scaled.data;
+    }
+
     encoder.addFrame(rgba, frameDelay);
   }
 

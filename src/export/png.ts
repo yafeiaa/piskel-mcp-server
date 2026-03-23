@@ -11,7 +11,7 @@
 
 import { Frame } from '../core/Frame.js';
 import { Piskel } from '../core/Piskel.js';
-import { intToRGBA } from '../core/color.js';
+import { intToRGBA, blendColors } from '../core/color.js';
 
 /**
  * Render a frame to RGBA pixel data.
@@ -49,6 +49,7 @@ export function frameToRGBA(frame: Frame): Uint8ClampedArray {
 
 /**
  * Merge multiple layers into a single frame.
+ * Respects layer visibility and opacity settings.
  */
 export function mergeLayersAtFrame(
   piskel: Piskel,
@@ -65,18 +66,47 @@ export function mergeLayersAtFrame(
       continue;
     }
 
+    // Skip invisible layers
+    if (!layer.isVisible()) {
+      continue;
+    }
+
     const frame = layer.getFrameAt(frameIndex);
     if (!frame) {
       continue;
     }
 
+    const layerOpacity = layer.getOpacity();
     const pixels = frame.getPixels();
+    const mergedPixels = merged.getPixels();
+
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const color = pixels[y * width + x];
-        if (color !== 0) {
-          // Alpha blending (simplified: non-transparent pixels override)
+        const idx = y * width + x;
+        let color = pixels[idx];
+        if (color === 0) {
+          continue;
+        }
+
+        // Apply layer opacity
+        if (layerOpacity < 1) {
+          const r = color & 0xff;
+          const g = (color >> 8) & 0xff;
+          const b = (color >> 16) & 0xff;
+          const a = ((color >> 24) >>> 0) & 0xff;
+          const newA = Math.round(a * layerOpacity);
+          if (newA === 0) {
+            continue;
+          }
+          color = ((newA << 24) >>> 0) + (b << 16) + (g << 8) + r;
+        }
+
+        // Alpha blend with existing pixel
+        const bgColor = mergedPixels[idx];
+        if (bgColor === 0) {
           merged.setPixel(x, y, color);
+        } else {
+          merged.setPixel(x, y, blendColors(color, bgColor));
         }
       }
     }
@@ -364,10 +394,48 @@ function deflate(data: Uint8Array): Uint8Array {
 }
 
 /**
+ * Scale RGBA data by an integer factor using nearest-neighbor interpolation.
+ */
+export function scaleRGBAData(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  scale: number
+): { data: Uint8ClampedArray; width: number; height: number } {
+  if (scale <= 1) {
+    return { data, width, height };
+  }
+
+  const scaledWidth = width * scale;
+  const scaledHeight = height * scale;
+  const scaledData = new Uint8ClampedArray(scaledWidth * scaledHeight * 4);
+
+  for (let y = 0; y < scaledHeight; y++) {
+    for (let x = 0; x < scaledWidth; x++) {
+      const srcX = Math.floor(x / scale);
+      const srcY = Math.floor(y / scale);
+      const srcIndex = (srcY * width + srcX) * 4;
+      const dstIndex = (y * scaledWidth + x) * 4;
+
+      scaledData[dstIndex] = data[srcIndex];
+      scaledData[dstIndex + 1] = data[srcIndex + 1];
+      scaledData[dstIndex + 2] = data[srcIndex + 2];
+      scaledData[dstIndex + 3] = data[srcIndex + 3];
+    }
+  }
+
+  return { data: scaledData, width: scaledWidth, height: scaledHeight };
+}
+
+/**
  * Export a single frame as PNG.
  */
-export function exportFrameAsPNG(frame: Frame): Uint8Array {
+export function exportFrameAsPNG(frame: Frame, scale: number = 1): Uint8Array {
   const rgba = frameToRGBA(frame);
+  if (scale > 1) {
+    const scaled = scaleRGBAData(rgba, frame.width, frame.height, scale);
+    return encodePNG(scaled.width, scaled.height, scaled.data);
+  }
   return encodePNG(frame.width, frame.height, rgba);
 }
 
@@ -376,9 +444,14 @@ export function exportFrameAsPNG(frame: Frame): Uint8Array {
  */
 export function exportSpriteSheetAsPNG(
   piskel: Piskel,
-  columns?: number
+  columns?: number,
+  scale: number = 1
 ): Uint8Array {
   const sheet = createSpriteSheet(piskel, columns);
+  if (scale > 1) {
+    const scaled = scaleRGBAData(sheet.data, sheet.width, sheet.height, scale);
+    return encodePNG(scaled.width, scaled.height, scaled.data);
+  }
   return encodePNG(sheet.width, sheet.height, sheet.data);
 }
 
@@ -387,8 +460,9 @@ export function exportSpriteSheetAsPNG(
  */
 export function exportMergedFrameAsPNG(
   piskel: Piskel,
-  frameIndex: number
+  frameIndex: number,
+  scale: number = 1
 ): Uint8Array {
   const merged = mergeLayersAtFrame(piskel, frameIndex);
-  return exportFrameAsPNG(merged);
+  return exportFrameAsPNG(merged, scale);
 }
