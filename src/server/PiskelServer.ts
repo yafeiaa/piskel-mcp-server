@@ -26,7 +26,6 @@ import { Palette, getPresetPalette, listPresetPalettes } from '../core/Palette.j
 import { intToHex, colorToInt } from '../core/color.js';
 import {
   drawPixel,
-  drawPixels,
   drawLine,
   drawRectangle,
   drawFilledRectangle,
