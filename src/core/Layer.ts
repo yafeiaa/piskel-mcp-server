@@ -19,6 +19,7 @@ export class Layer {
   private name: string;
   private frames: Frame[];
   private opacity: number;
+  private visible: boolean;
 
   constructor(name: string) {
     if (!name) {
@@ -27,6 +28,7 @@ export class Layer {
     this.name = name;
     this.frames = [];
     this.opacity = 1;
+    this.visible = true;
   }
 
   /**
@@ -62,6 +64,14 @@ export class Layer {
 
   isTransparent(): boolean {
     return this.opacity < 1;
+  }
+
+  isVisible(): boolean {
+    return this.visible;
+  }
+
+  setVisible(visible: boolean): void {
+    this.visible = visible;
   }
 
   getFrames(): Frame[] {

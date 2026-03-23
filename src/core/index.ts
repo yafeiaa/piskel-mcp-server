@@ -8,4 +8,5 @@
 export * from './color.js';
 export * from './Frame.js';
 export * from './Layer.js';
+export * from './Palette.js';
 export * from './Piskel.js';

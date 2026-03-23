@@ -15,4 +15,17 @@ export {
   drawFilledCircle,
   fillArea,
   erasePixel,
+  replaceColor,
+  swapColors,
 } from './drawing.js';
+
+export {
+  flipHorizontal,
+  flipVertical,
+  rotate90CW,
+  rotate90CCW,
+  rotate180,
+  shiftFrame,
+  applyTransformToFrame,
+  applyTransformToLayer,
+} from './transform.js';

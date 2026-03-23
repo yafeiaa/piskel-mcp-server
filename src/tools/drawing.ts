@@ -249,3 +249,83 @@ export function erasePixel(
 
   return count;
 }
+
+/**
+ * Replace all occurrences of a color with another color in a frame.
+ */
+export function replaceColor(
+  frame: Frame,
+  oldColor: number | string,
+  newColor: number | string
+): number {
+  const oldColorInt = typeof oldColor === 'string' ? colorToInt(oldColor) : oldColor;
+  const newColorInt = typeof newColor === 'string' ? colorToInt(newColor) : newColor;
+
+  if (oldColorInt === newColorInt) {
+    return 0;
+  }
+
+  const width = frame.getWidth();
+  const height = frame.getHeight();
+  const pixels = frame.getPixels();
+  let count = 0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (pixels[y * width + x] === oldColorInt) {
+        frame.setPixel(x, y, newColorInt);
+        count++;
+      }
+    }
+  }
+
+  return count;
+}
+
+/**
+ * Swap two colors in a frame (A becomes B, B becomes A).
+ */
+export function swapColors(
+  frame: Frame,
+  colorA: number | string,
+  colorB: number | string
+): number {
+  const colorAInt = typeof colorA === 'string' ? colorToInt(colorA) : colorA;
+  const colorBInt = typeof colorB === 'string' ? colorToInt(colorB) : colorB;
+
+  if (colorAInt === colorBInt) {
+    return 0;
+  }
+
+  const width = frame.getWidth();
+  const height = frame.getHeight();
+  const pixels = frame.getPixels();
+  let count = 0;
+
+  // Collect positions first to avoid double-swap
+  const swapToB: Array<[number, number]> = [];
+  const swapToA: Array<[number, number]> = [];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const color = pixels[y * width + x];
+      if (color === colorAInt) {
+        swapToB.push([x, y]);
+      } else if (color === colorBInt) {
+        swapToA.push([x, y]);
+      }
+    }
+  }
+
+  for (const [x, y] of swapToB) {
+    frame.setPixel(x, y, colorBInt);
+    count++;
+  }
+
+  for (const [x, y] of swapToA) {
+    frame.setPixel(x, y, colorAInt);
+    count++;
+  }
+
+  return count;
+}

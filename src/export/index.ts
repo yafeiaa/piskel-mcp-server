@@ -9,6 +9,7 @@ export {
   frameToRGBA,
   mergeLayersAtFrame,
   createSpriteSheet,
+  scaleRGBAData,
   encodePNG,
   exportFrameAsPNG,
   exportSpriteSheetAsPNG,
