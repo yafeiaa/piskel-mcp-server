@@ -14,7 +14,15 @@ import { PiskelServer } from './server/index.js';
 
 async function main(): Promise<void> {
   const server = new PiskelServer();
-  await server.run();
+  const transport = process.env.TRANSPORT || 'stdio';
+
+  if (transport === 'http') {
+    const port = parseInt(process.env.PORT || '3000', 10);
+    await server.runHTTP(port);
+  } else {
+    await server.run();
+  }
+  
 }
 
 main().catch((error) => {
