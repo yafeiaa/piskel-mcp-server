@@ -28,13 +28,18 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.33.1",
-    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "gifenc": "^1.0.3",
     "pngjs": "^7.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^20.10.0",
+    "@types/pngjs": "^6.0.5",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.57.0",
@@ -46,10 +51,10 @@
     "node": ">=18.0.0"
   },
   "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "*",
+    "@rollup/rollup-darwin-x64": "*",
     "@rollup/rollup-linux-x64-gnu": "*",
     "@rollup/rollup-linux-x64-musl": "*",
-    "@rollup/rollup-darwin-x64": "*",
-    "@rollup/rollup-darwin-arm64": "*",
     "@rollup/rollup-win32-x64-msvc": "*"
   }
 }

@@ -11,6 +11,7 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -18,6 +19,10 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import express from 'express';
+import cors from 'cors';
+import { PNG } from 'pngjs';
 
 import { Frame } from '../core/Frame.js';
 import { Layer } from '../core/Layer.js';
@@ -1257,6 +1262,76 @@ export class PiskelServer {
           required: ['projectId', 'fps'],
         },
       },
+
+      // Import
+      {
+        name: 'import_png',
+        description: 'Import a PNG image into a specific layer and frame. Accepts base64-encoded PNG data OR a file path. The image will be loaded pixel-by-pixel, preserving transparency. If the image dimensions differ from the project, it will be cropped or padded.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            projectId: {
+              type: 'string',
+              description: 'Project identifier',
+            },
+            layerIndex: {
+              type: 'number',
+              description: 'Layer index to import into (default: 0)',
+            },
+            frameIndex: {
+              type: 'number',
+              description: 'Frame index to import into (default: 0)',
+            },
+            pngBase64: {
+              type: 'string',
+              description: 'Base64-encoded PNG image data (without data:image/png;base64, prefix)',
+            },
+            filePath: {
+              type: 'string',
+              description: 'Absolute file path to a PNG file on disk (alternative to pngBase64)',
+            },
+          },
+          required: ['projectId'],
+        },
+      },
+      {
+  name: 'hue_shift_recolor',
+  description: 'Recolor sprites by shifting hue. Reads PNGs from an input folder, shifts pixels in a source hue range to a target hue, writes results to output folder. Perfect for creating color variants of character sprites (e.g. red shirt → blue shirt).',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      inputFolder: {
+        type: 'string',
+        description: 'Absolute path to folder containing source PNG files',
+      },
+      outputFolder: {
+        type: 'string',
+        description: 'Absolute path to output folder (created if missing)',
+      },
+      targetHue: {
+        type: 'number',
+        description: 'Target hue in degrees (0-360). E.g. 210=blue, 120=green, 55=yellow, 280=purple',
+      },
+      sourceHueMin: {
+        type: 'number',
+        description: 'Min source hue to detect (default: 340 for red)',
+      },
+      sourceHueMax: {
+        type: 'number',
+        description: 'Max source hue to detect (default: 20 for red, wraps around 360)',
+      },
+      sourceHueCenter: {
+        type: 'number',
+        description: 'Center of source hue for offset calculation (default: 0 for red)',
+      },
+      minSaturation: {
+        type: 'number',
+        description: 'Min saturation (0-1) to count as source color (default: 0.15, ignores grays)',
+      },
+    },
+    required: ['inputFolder', 'outputFolder', 'targetHue'],
+  },
+},
     ];
   }
 
@@ -1644,6 +1719,25 @@ export class PiskelServer {
           args.projectId as string,
           args.fps as number
         );
+
+      case 'import_png':
+        return this.importPngTool(
+          args.projectId as string,
+          (args.layerIndex as number) ?? 0,
+          (args.frameIndex as number) ?? 0,
+          args.pngBase64 as string | undefined,
+          args.filePath as string | undefined
+        );
+        case 'hue_shift_recolor':
+          return this.hueShiftRecolorTool(
+            args.inputFolder as string,
+            args.outputFolder as string,
+            args.targetHue as number,
+            (args.sourceHueMin as number) ?? 340,
+            (args.sourceHueMax as number) ?? 20,
+            (args.sourceHueCenter as number) ?? 0,
+            (args.minSaturation as number) ?? 0.15
+          );
 
       default:
         throw new Error(`Unknown tool: ${name}`);
@@ -2778,12 +2872,275 @@ export class PiskelServer {
     };
   }
 
+  // Import PNG implementation
+  private importPngTool(
+    projectId: string,
+    layerIndex: number,
+    frameIndex: number,
+    pngBase64?: string,
+    filePath?: string
+  ): object {
+    if (!pngBase64 && !filePath) {
+      throw new Error('Either pngBase64 or filePath must be provided');
+    }
+
+    const piskel = this.getProject(projectId);
+    const projectWidth = piskel.getWidth();
+    const projectHeight = piskel.getHeight();
+
+    // Get PNG buffer from base64 or file
+    let pngBuffer: Buffer;
+    if (filePath) {
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File not found: ${filePath}`);
+      }
+      pngBuffer = fs.readFileSync(filePath);
+    } else {
+      // Strip data URI prefix if present
+      let b64 = pngBase64!;
+      if (b64.startsWith('data:')) {
+        b64 = b64.split(',')[1] || b64;
+      }
+      pngBuffer = Buffer.from(b64, 'base64');
+    }
+
+    // Decode PNG
+    const png = PNG.sync.read(pngBuffer);
+    const { width: imgWidth, height: imgHeight, data: imgData } = png;
+
+    // Get target layer and frame
+    const layer = piskel.getLayerAt(layerIndex);
+    if (!layer) {
+      throw new Error(`Layer ${layerIndex} not found. Add it first with add_layer.`);
+    }
+    const frame = layer.getFrameAt(frameIndex);
+    if (!frame) {
+      throw new Error(`Frame ${frameIndex} not found on layer ${layerIndex}. Add it first with add_frame.`);
+    }
+
+    // Copy pixels from PNG into frame
+    const maxX = Math.min(imgWidth, projectWidth);
+    const maxY = Math.min(imgHeight, projectHeight);
+    let pixelsImported = 0;
+    let transparentSkipped = 0;
+
+    for (let y = 0; y < maxY; y++) {
+      for (let x = 0; x < maxX; x++) {
+        const srcIdx = (y * imgWidth + x) * 4;
+        const r = imgData[srcIdx];
+        const g = imgData[srcIdx + 1];
+        const b = imgData[srcIdx + 2];
+        const a = imgData[srcIdx + 3];
+
+        if (a === 0) {
+          transparentSkipped++;
+          continue;
+        }
+
+        // Convert RGBA to AABBGGRR (little-endian Uint32)
+        const colorInt = ((a << 24) >>> 0) + (b << 16) + (g << 8) + r;
+        frame.setPixel(x, y, colorInt);
+        pixelsImported++;
+      }
+    }
+
+    return {
+      success: true,
+      projectId,
+      layerIndex,
+      frameIndex,
+      sourceWidth: imgWidth,
+      sourceHeight: imgHeight,
+      projectSize: `${projectWidth}x${projectHeight}`,
+      pixelsImported,
+      transparentSkipped,
+    };
+  }
+
   /**
-   * Start the server.
+   * Create a fresh MCP Server instance with handlers wired to this PiskelServer's state.
+   * Needed for stateless HTTP mode where each request gets its own Server+Transport.
+   */
+  private createServerInstance(): Server {
+    const srv = new Server(
+      { name: 'piskel-mcp-server', version: '1.0.0' },
+      { capabilities: { tools: {} } }
+    );
+    srv.setRequestHandler(ListToolsRequestSchema, async () => {
+      return { tools: this.getTools() };
+    });
+    srv.setRequestHandler(CallToolRequestSchema, async (request) => {
+      return this.handleToolCall(request.params.name, request.params.arguments ?? {});
+    });
+    return srv;
+  }
+
+
+  private hueShiftRecolorTool(
+  inputFolder: string,
+  outputFolder: string,
+  targetHue: number,
+  sourceHueMin: number,
+  sourceHueMax: number,
+  sourceHueCenter: number,
+  minSaturation: number
+): object {
+  if (!fs.existsSync(inputFolder)) {
+    throw new Error(`Input folder not found: ${inputFolder}`);
+  }
+  if (!fs.existsSync(outputFolder)) {
+    fs.mkdirSync(outputFolder, { recursive: true });
+  }
+
+  const files = fs.readdirSync(inputFolder).filter(f => f.toLowerCase().endsWith('.png'));
+  const results: Array<{ file: string; pixelsChanged: number }> = [];
+
+  for (const file of files) {
+    const inputPath = path.join(inputFolder, file);
+    const outputPath = path.join(outputFolder, file);
+
+    const pngBuffer = fs.readFileSync(inputPath);
+    const png = PNG.sync.read(pngBuffer);
+    const { data } = png;
+
+    let pixelsChanged = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+
+      if (a === 0) continue;
+
+      // Convert RGB to HSV
+      const rf = r / 255, gf = g / 255, bf = b / 255;
+      const max = Math.max(rf, gf, bf);
+      const min = Math.min(rf, gf, bf);
+      const diff = max - min;
+
+      let h = 0, s = 0, v = max;
+
+      if (max > 0) s = diff / max;
+
+      if (diff > 0) {
+        if (max === rf) h = 60 * (((gf - bf) / diff) % 6);
+        else if (max === gf) h = 60 * ((bf - rf) / diff + 2);
+        else h = 60 * ((rf - gf) / diff + 4);
+        if (h < 0) h += 360;
+      }
+
+      // Check if pixel is in source hue range
+      const inRange = sourceHueMin > sourceHueMax
+        ? (h >= sourceHueMin || h <= sourceHueMax)  // wraps around 360
+        : (h >= sourceHueMin && h <= sourceHueMax);
+
+      if (!inRange || s < minSaturation) continue;
+
+      // Calculate hue offset from source center
+      let offset = h - sourceHueCenter;
+      if (offset > 180) offset -= 360;
+      if (offset < -180) offset += 360;
+
+      // Apply offset to target hue
+      let newH = (targetHue + offset) % 360;
+      if (newH < 0) newH += 360;
+
+      // Convert HSV back to RGB
+      const c = v * s;
+      const x = c * (1 - Math.abs((newH / 60) % 2 - 1));
+      const m = v - c;
+
+      let rn = 0, gn = 0, bn = 0;
+      if (newH < 60)       { rn = c; gn = x; bn = 0; }
+      else if (newH < 120) { rn = x; gn = c; bn = 0; }
+      else if (newH < 180) { rn = 0; gn = c; bn = x; }
+      else if (newH < 240) { rn = 0; gn = x; bn = c; }
+      else if (newH < 300) { rn = x; gn = 0; bn = c; }
+      else                 { rn = c; gn = 0; bn = x; }
+
+      data[i]     = Math.round((rn + m) * 255);
+      data[i + 1] = Math.round((gn + m) * 255);
+      data[i + 2] = Math.round((bn + m) * 255);
+      // alpha unchanged
+
+      pixelsChanged++;
+    }
+
+    const outBuffer = PNG.sync.write(png);
+    fs.writeFileSync(outputPath, outBuffer);
+    results.push({ file, pixelsChanged });
+  }
+
+  return {
+    success: true,
+    inputFolder,
+    outputFolder,
+    targetHue,
+    filesProcessed: results.length,
+    results,
+  };
+}
+
+
+  /**
+   * Start the server in stdio mode (for local/Claude Desktop).
    */
   async run(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('Piskel MCP Server running on stdio');
+  }
+
+  /**
+   * Start the server in HTTP mode (for remote/claude.ai).
+   * Uses Streamable HTTP transport — stateless: fresh Server per request.
+   */
+  async runHTTP(port: number = 3000): Promise<void> {
+    const app = express();
+    app.use(cors());
+    app.use(express.json({ limit: '50mb' }));
+
+    // Health check endpoint
+    app.get('/health', (_req, res) => {
+      res.json({
+        status: 'ok',
+        server: 'piskel-mcp-server',
+        version: '1.0.0',
+        projects: this.projects.size,
+      });
+    });
+
+    // MCP endpoint — stateless: new Server + transport per request
+    app.post('/mcp', async (req, res) => {
+      try {
+        const srv = this.createServerInstance();
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+          enableJsonResponse: true,
+        });
+        res.on('close', () => transport.close());
+        await srv.connect(transport);
+        await transport.handleRequest(req, res, req.body);
+      } catch (err) {
+        console.error('MCP request error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Internal server error' });
+        }
+      }
+    });
+
+    // Method not allowed for GET/DELETE on /mcp
+    app.get('/mcp', (_req, res) => {
+      res.status(405).json({ error: 'Method not allowed. Use POST.' });
+    });
+    app.delete('/mcp', (_req, res) => {
+      res.status(405).json({ error: 'Method not allowed. Use POST.' });
+    });
+
+    app.listen(port, () => {
+      console.error(`Piskel MCP Server running on http://0.0.0.0:${port}/mcp`);
+      console.error(`Health check: http://0.0.0.0:${port}/health`);
+    });
   }
 }
