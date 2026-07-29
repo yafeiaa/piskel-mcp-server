@@ -28,7 +28,7 @@ import { Frame } from '../core/Frame.js';
 import { Layer } from '../core/Layer.js';
 import { Piskel } from '../core/Piskel.js';
 import { Palette, getPresetPalette, listPresetPalettes } from '../core/Palette.js';
-import { intToHex, colorToInt } from '../core/color.js';
+import { intToHex, colorToInt, parseColor, rgbToHex } from '../core/color.js';
 import {
   resolveDataDir,
   ensureDataDir,
@@ -1240,7 +1240,7 @@ export class PiskelServer {
       // Analytics tools
       {
         name: 'get_used_colors',
-        description: 'Get a list of all unique colors used in a frame with pixel counts. Useful for palette analysis and color management.',
+        description: 'Get a list of all unique colors used in a frame with pixel counts and bounding boxes (min/max x/y where each color appears). Useful for palette analysis and for attributing colors to sprite parts (e.g. hair at the top vs shoes at the bottom).',
         inputSchema: {
           type: 'object',
           properties: {
@@ -1284,7 +1284,7 @@ export class PiskelServer {
       // Import
       {
         name: 'import_png',
-        description: 'Import a PNG image into a specific layer and frame. Accepts base64-encoded PNG data OR a file path. The image will be loaded pixel-by-pixel, preserving transparency. If the image dimensions differ from the project, it will be cropped or padded.',
+        description: 'Import a PNG image into a specific layer and frame. Accepts base64-encoded PNG data OR a file path. The image will be loaded pixel-by-pixel, preserving transparency. If the image dimensions differ from the project, it will be cropped or padded (a warning is returned). With autoCreate, a missing project is created with the PNG\'s exact dimensions.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -1307,6 +1307,10 @@ export class PiskelServer {
             filePath: {
               type: 'string',
               description: 'Absolute file path to a PNG file on disk (alternative to pngBase64)',
+            },
+            autoCreate: {
+              type: 'boolean',
+              description: 'If the project does not exist, create it automatically with the PNG\'s exact dimensions, one layer and one frame (default: false)',
             },
           },
           required: ['projectId'],
@@ -1350,6 +1354,56 @@ export class PiskelServer {
     required: ['inputFolder', 'outputFolder', 'targetHue'],
   },
 },
+      {
+        name: 'generate_variants',
+        description: 'Batch-generate recolored variants of PNG sprites. Reads PNGs from inputFolder, applies each variant\'s colorMap (source hex -> replacement hex), and writes results to <outputRoot>/<variant name>/<relative path>. Dimensions, pixel positions and alpha are preserved. With tolerance 0, only exact RGB matches are replaced. With tolerance > 0, every pixel within that RGB distance of a source color is shifted by the target-minus-source delta, preserving shading and anti-aliasing tones (required for non-palette-clean images). The response reports source colors that never matched any pixel (typo detection). Designed for generating many palette combinations in a single call.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            inputFolder: {
+              type: 'string',
+              description: 'Absolute path to folder containing source PNG files',
+            },
+            outputRoot: {
+              type: 'string',
+              description: 'Absolute path to the output root folder (created if missing). Each variant is written to <outputRoot>/<variant name>/',
+            },
+            variants: {
+              type: 'array',
+              description: 'Variants to generate, each with a folder name and a color mapping',
+              items: {
+                type: 'object',
+                properties: {
+                  name: {
+                    type: 'string',
+                    description: 'Variant folder name (e.g. "hair_bd_eyes_g_top_r_and_w_trousers_bk_shoes_bk_skin_l")',
+                  },
+                  colorMap: {
+                    type: 'object',
+                    description: 'Mapping of source color to replacement color in hex, e.g. {"#a02c2c": "#2c7a2c"}. The pixel\'s original alpha is kept.',
+                    additionalProperties: { type: 'string' },
+                  },
+                },
+                required: ['name', 'colorMap'],
+              },
+            },
+            tolerance: {
+              type: 'number',
+              description: 'Max Euclidean RGB distance (0-441) for a pixel to match a source color; the nearest source color wins. 0 (default) = exact match only. When > 0, matched pixels keep their shading: they are shifted by (target - source), not flattened to the target color. Typical value for anti-aliased sprites: 60-90.',
+            },
+            recursive: {
+              type: 'boolean',
+              description: 'Also process PNGs in subfolders, preserving relative paths in the output (default: false)',
+            },
+            exclude: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Folder or file names to skip, matched case-insensitively against each path segment (e.g. ["variants", "results", "__probe_front.png"])',
+            },
+          },
+          required: ['inputFolder', 'outputRoot', 'variants'],
+        },
+      },
     ];
   }
 
@@ -1744,7 +1798,8 @@ export class PiskelServer {
           (args.layerIndex as number) ?? 0,
           (args.frameIndex as number) ?? 0,
           args.pngBase64 as string | undefined,
-          args.filePath as string | undefined
+          args.filePath as string | undefined,
+          (args.autoCreate as boolean) ?? false
         );
         case 'hue_shift_recolor':
           return this.hueShiftRecolorTool(
@@ -1756,6 +1811,16 @@ export class PiskelServer {
             (args.sourceHueCenter as number) ?? 0,
             (args.minSaturation as number) ?? 0.15
           );
+
+      case 'generate_variants':
+        return this.generateVariantsTool(
+          args.inputFolder as string,
+          args.outputRoot as string,
+          args.variants as Array<{ name: string; colorMap: Record<string, string> }>,
+          (args.recursive as boolean) ?? false,
+          (args.exclude as string[]) ?? [],
+          (args.tolerance as number) ?? 0
+        );
 
       default:
         throw new Error(`Unknown tool: ${name}`);
@@ -2900,26 +2965,47 @@ export class PiskelServer {
     frameIndex: number
   ): object {
     const frame = this.getFrame(projectId, layerIndex, frameIndex);
+    const width = frame.getWidth();
     const pixels = frame.getPixels();
-    const colorCounts = new Map<number, number>();
+    const colorStats = new Map<
+      number,
+      { count: number; x0: number; y0: number; x1: number; y1: number }
+    >();
 
     for (let i = 0; i < pixels.length; i++) {
       const color = pixels[i];
-      colorCounts.set(color, (colorCounts.get(color) ?? 0) + 1);
+      const x = i % width;
+      const y = Math.floor(i / width);
+      const stat = colorStats.get(color);
+      if (stat) {
+        stat.count++;
+        if (x < stat.x0) stat.x0 = x;
+        if (y < stat.y0) stat.y0 = y;
+        if (x > stat.x1) stat.x1 = x;
+        if (y > stat.y1) stat.y1 = y;
+      } else {
+        colorStats.set(color, { count: 1, x0: x, y0: y, x1: x, y1: y });
+      }
     }
 
     const totalPixels = pixels.length;
-    const colors: Array<{ color: string; count: number; percentage: number }> = [];
+    const colors: Array<{
+      color: string;
+      count: number;
+      percentage: number;
+      bounds: { x0: number; y0: number; x1: number; y1: number };
+    }> = [];
     let transparentCount = 0;
 
-    for (const [colorInt, count] of colorCounts) {
+    for (const [colorInt, stat] of colorStats) {
       if (colorInt === 0) {
-        transparentCount = count;
+        transparentCount = stat.count;
       } else {
         colors.push({
           color: intToHex(colorInt),
-          count,
-          percentage: Math.round(count / totalPixels * 10000) / 100,
+          count: stat.count,
+          percentage: Math.round(stat.count / totalPixels * 10000) / 100,
+          bounds: { x0: stat.x0, y0: stat.y0, x1: stat.x1, y1: stat.y1 },
         });
       }
     }
@@ -2962,15 +3048,12 @@ export class PiskelServer {
     layerIndex: number,
     frameIndex: number,
     pngBase64?: string,
-    filePath?: string
+    filePath?: string,
+    autoCreate: boolean = false
   ): object {
     if (!pngBase64 && !filePath) {
       throw new Error('Either pngBase64 or filePath must be provided');
     }
-
-    const piskel = this.getProject(projectId);
-    const projectWidth = piskel.getWidth();
-    const projectHeight = piskel.getHeight();
 
     // Get PNG buffer from base64 or file
     let pngBuffer: Buffer;
@@ -2991,6 +3074,16 @@ export class PiskelServer {
     // Decode PNG
     const png = PNG.sync.read(pngBuffer);
     const { width: imgWidth, height: imgHeight, data: imgData } = png;
+
+    let projectCreated = false;
+    if (!this.projects.has(projectId) && autoCreate) {
+      this.createProject(projectId, imgWidth, imgHeight);
+      projectCreated = true;
+    }
+
+    const piskel = this.getProject(projectId);
+    const projectWidth = piskel.getWidth();
+    const projectHeight = piskel.getHeight();
 
     // Get target layer and frame
     const layer = piskel.getLayerAt(layerIndex);
@@ -3028,10 +3121,12 @@ export class PiskelServer {
       }
     }
 
+    const sizeMismatch = imgWidth !== projectWidth || imgHeight !== projectHeight;
     this.scheduleSave(projectId);
     return {
       success: true,
       projectId,
+      projectCreated,
       layerIndex,
       frameIndex,
       sourceWidth: imgWidth,
@@ -3039,6 +3134,9 @@ export class PiskelServer {
       projectSize: `${projectWidth}x${projectHeight}`,
       pixelsImported,
       transparentSkipped,
+      ...(sizeMismatch && {
+        warning: `Source image is ${imgWidth}x${imgHeight} but project is ${projectWidth}x${projectHeight}; the image was ${imgWidth > projectWidth || imgHeight > projectHeight ? 'cropped' : 'padded'}. Use autoCreate on a fresh projectId to import at native size.`,
+      }),
     };
   }
 
@@ -3167,6 +3265,161 @@ export class PiskelServer {
   };
 }
 
+  private generateVariantsTool(
+    inputFolder: string,
+    outputRoot: string,
+    variants: Array<{ name: string; colorMap: Record<string, string> }>,
+    recursive: boolean,
+    exclude: string[],
+    tolerance: number
+  ): object {
+    if (!fs.existsSync(inputFolder)) {
+      throw new Error(`Input folder not found: ${inputFolder}`);
+    }
+    if (!Array.isArray(variants) || variants.length === 0) {
+      throw new Error('variants must be a non-empty array');
+    }
+
+    const excludeSet = new Set(exclude.map((e) => e.toLowerCase()));
+
+    // Collect PNG files as paths relative to inputFolder
+    const files: string[] = [];
+    const collect = (dir: string, rel: string): void => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (excludeSet.has(entry.name.toLowerCase())) continue;
+        const entryRel = rel ? path.join(rel, entry.name) : entry.name;
+        if (entry.isDirectory()) {
+          if (recursive) collect(path.join(dir, entry.name), entryRel);
+        } else if (entry.name.toLowerCase().endsWith('.png')) {
+          files.push(entryRel);
+        }
+      }
+    };
+    collect(inputFolder, '');
+
+    if (files.length === 0) {
+      throw new Error(`No PNG files found in: ${inputFolder}`);
+    }
+
+    if (tolerance < 0 || tolerance > 442) {
+      throw new Error(`tolerance must be between 0 and 441, got: ${tolerance}`);
+    }
+
+    // Pre-parse and validate all variants before writing anything
+    const parsedVariants = variants.map((v) => {
+      if (!v.name || /[\\/:*?"<>|]/.test(v.name)) {
+        throw new Error(`Invalid variant name (empty or contains path characters): "${v.name}"`);
+      }
+      if (!v.colorMap || Object.keys(v.colorMap).length === 0) {
+        throw new Error(`Variant "${v.name}" has an empty colorMap`);
+      }
+      const map = new Map<number, { r: number; g: number; b: number }>();
+      for (const [oldColor, newColor] of Object.entries(v.colorMap)) {
+        const from = parseColor(oldColor);
+        if (!from) throw new Error(`Variant "${v.name}": invalid source color "${oldColor}"`);
+        const to = parseColor(newColor);
+        if (!to) throw new Error(`Variant "${v.name}": invalid replacement color "${newColor}"`);
+        map.set((from.r << 16) | (from.g << 8) | from.b, { r: to.r, g: to.g, b: to.b });
+      }
+      // Signature identifies the source-color set, so variants sharing a palette
+      // can share the per-file pixel->source assignment cache.
+      const sourceKeys = [...map.keys()].sort((a, b) => a - b);
+      return { name: v.name, map, sourceKeys, signature: sourceKeys.join(',') };
+    });
+
+    const tolSq = tolerance * tolerance;
+    const clamp = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v);
+    const matchedKeys = new Set<number>();
+    let filesWritten = 0;
+    let totalPixelsChanged = 0;
+
+    for (const relFile of files) {
+      const png = PNG.sync.read(fs.readFileSync(path.join(inputFolder, relFile)));
+      const { width, height, data } = png;
+
+      // Per source-color-set: map each RGB value in this file to its matched
+      // source color (or -1), computed once and reused by every variant.
+      const assignmentCache = new Map<string, Map<number, number>>();
+      const getAssignments = (signature: string, sourceKeys: number[]): Map<number, number> => {
+        let assignments = assignmentCache.get(signature);
+        if (assignments) return assignments;
+        assignments = new Map<number, number>();
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i + 3] === 0) continue;
+          const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+          if (assignments.has(key)) continue;
+          let best = -1;
+          let bestDist = tolSq + 1;
+          for (const src of sourceKeys) {
+            const dr = data[i] - ((src >> 16) & 0xff);
+            const dg = data[i + 1] - ((src >> 8) & 0xff);
+            const db = data[i + 2] - (src & 0xff);
+            const dist = dr * dr + dg * dg + db * db;
+            if (dist < bestDist) {
+              bestDist = dist;
+              best = src;
+            }
+          }
+          assignments.set(key, best);
+        }
+        assignmentCache.set(signature, assignments);
+        return assignments;
+      };
+
+      for (const variant of parsedVariants) {
+        const assignments = getAssignments(variant.signature, variant.sourceKeys);
+        const outData = Buffer.from(data);
+        let pixelsChanged = 0;
+
+        for (let i = 0; i < outData.length; i += 4) {
+          if (outData[i + 3] === 0) continue;
+          const key = (outData[i] << 16) | (outData[i + 1] << 8) | outData[i + 2];
+          const srcKey = assignments.get(key) ?? -1;
+          if (srcKey === -1) continue;
+          const target = variant.map.get(srcKey)!;
+          // Shift by (target - source) so shading and anti-aliasing survive;
+          // for an exact match (tolerance 0) this equals plain replacement.
+          outData[i] = clamp(outData[i] - ((srcKey >> 16) & 0xff) + target.r);
+          outData[i + 1] = clamp(outData[i + 1] - ((srcKey >> 8) & 0xff) + target.g);
+          outData[i + 2] = clamp(outData[i + 2] - (srcKey & 0xff) + target.b);
+          // alpha unchanged
+          matchedKeys.add(srcKey);
+          pixelsChanged++;
+        }
+
+        const outPath = path.join(outputRoot, variant.name, relFile);
+        fs.mkdirSync(path.dirname(outPath), { recursive: true });
+        const outPng = new PNG({ width, height });
+        outPng.data = outData;
+        fs.writeFileSync(outPath, PNG.sync.write(outPng));
+        filesWritten++;
+        totalPixelsChanged += pixelsChanged;
+      }
+    }
+
+    // Report source colors that matched no pixel in any file (likely typos)
+    const allKeys = new Set<number>();
+    for (const v of parsedVariants) {
+      for (const k of v.map.keys()) allKeys.add(k);
+    }
+    const sourceColorsNeverMatched: string[] = [];
+    for (const k of allKeys) {
+      if (!matchedKeys.has(k)) {
+        sourceColorsNeverMatched.push(rgbToHex((k >> 16) & 0xff, (k >> 8) & 0xff, k & 0xff));
+      }
+    }
+
+    return {
+      success: true,
+      inputFolder,
+      outputRoot,
+      sourceFiles: files.length,
+      variantsGenerated: parsedVariants.length,
+      filesWritten,
+      totalPixelsChanged,
+      sourceColorsNeverMatched,
+    };
+  }
 
   /**
    * Start the server in stdio mode (for local/Claude Desktop).

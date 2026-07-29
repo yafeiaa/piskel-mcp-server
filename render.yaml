@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: piskel-mcp-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: TRANSPORT
+        value: http
+    healthCheckPath: /health
